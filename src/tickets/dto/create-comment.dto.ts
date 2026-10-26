@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsInt, IsString, Length, Min } from 'class-validator';
+import { IsString, Length } from 'class-validator';
 
 export class CreateCommentDto {
   @Transform(({ value }: { value: unknown }) =>
@@ -8,8 +8,4 @@ export class CreateCommentDto {
   @IsString()
   @Length(1, 1000)
   text: string;
-
-  @IsInt()
-  @Min(1)
-  authorId: number;
 }

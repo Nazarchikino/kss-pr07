@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -7,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { CLOCK, type Clock } from '../common/clock.js';
 import { type Page, PageQueryDto, paginate } from '../common/page.js';
+import type { User } from '../users/user.model.js';
 import { UsersService } from '../users/users.service.js';
 import type { Comment } from './comment.model.js';
 import type { CreateCommentDto } from './dto/create-comment.dto.js';
@@ -41,12 +43,11 @@ export class TicketsService {
       );
     }
     const desc = query.sort.startsWith('-');
-    const key = query.sort.replace('-', '') as 'createdAt' | 'priority';
+    const byPriority = query.sort === 'priority' || query.sort === '-priority';
     items.sort((a, b) => {
-      const diff =
-        key === 'priority'
-          ? PRIORITY_WEIGHT[a.priority] - PRIORITY_WEIGHT[b.priority]
-          : a.createdAt.localeCompare(b.createdAt);
+      const diff = byPriority
+        ? PRIORITY_WEIGHT[a.priority] - PRIORITY_WEIGHT[b.priority]
+        : a.createdAt.localeCompare(b.createdAt);
       return (desc ? -diff : diff) || a.id - b.id;
     });
     return paginate(items, query.page, query.pageSize);
@@ -58,15 +59,19 @@ export class TicketsService {
     return ticket;
   }
 
-  async create(dto: CreateTicketDto): Promise<Ticket> {
-    this.assertUserExists(dto.authorId, 'authorId');
+  async create(dto: CreateTicketDto, user: User): Promise<Ticket> {
+    if (dto.priority === 'critical' && user.role === 'student') {
+      throw new ForbiddenException(
+        'Здобувач не може створювати заявки з критичним пріоритетом',
+      );
+    }
     const now = this.clock.now().toISOString();
     return this.repo.create({
       title: dto.title,
       ...(dto.description ? { description: dto.description } : {}),
       status: 'open',
       priority: dto.priority,
-      authorId: dto.authorId,
+      authorId: user.id,
       assigneeId: null,
       createdAt: now,
       updatedAt: now,
@@ -74,7 +79,7 @@ export class TicketsService {
     });
   }
 
-  async update(id: number, dto: UpdateTicketDto): Promise<Ticket> {
+  async update(id: number, dto: UpdateTicketDto, user: User): Promise<Ticket> {
     // Поля класу DTO, яких немає в запиті, мають значення undefined – відкидаємо їх.
     const patch: Partial<Omit<Ticket, 'id'>> = Object.fromEntries(
       Object.entries(dto).filter(([, v]) => v !== undefined),
@@ -87,13 +92,24 @@ export class TicketsService {
         ],
       });
     }
-    await this.findOne(id);
+    const ticket = await this.findOne(id);
+    if (user.role !== 'admin' && ticket.authorId !== user.id) {
+      throw new ForbiddenException(
+        'Редагувати заявку може лише її автор або адміністратор',
+      );
+    }
+    if (dto.assigneeId !== undefined && user.role !== 'admin') {
+      throw new ForbiddenException(
+        'Призначати виконавця може лише адміністратор',
+      );
+    }
     if (patch.assigneeId) this.assertUserExists(patch.assigneeId, 'assigneeId');
     const updated = await this.repo.update(id, {
       ...patch,
       updatedAt: this.clock.now().toISOString(),
     });
-    return updated as Ticket;
+    if (!updated) throw new NotFoundException(`Заявку з id=${id} не знайдено`);
+    return updated;
   }
 
   async changeStatus(id: number, status: TicketStatus): Promise<Ticket> {
@@ -105,10 +121,12 @@ export class TicketsService {
         allowed,
       });
     }
-    return (await this.repo.update(id, {
+    const updated = await this.repo.update(id, {
       status,
       updatedAt: this.clock.now().toISOString(),
-    })) as Ticket;
+    });
+    if (!updated) throw new NotFoundException(`Заявку з id=${id} не знайдено`);
+    return updated;
   }
 
   async remove(id: number): Promise<void> {
@@ -137,12 +155,15 @@ export class TicketsService {
     return comment;
   }
 
-  async addComment(ticketId: number, dto: CreateCommentDto): Promise<Comment> {
+  async addComment(
+    ticketId: number,
+    dto: CreateCommentDto,
+    user: User,
+  ): Promise<Comment> {
     await this.findOne(ticketId);
-    this.assertUserExists(dto.authorId, 'authorId');
     return this.repo.addComment({
       ticketId,
-      authorId: dto.authorId,
+      authorId: user.id,
       text: dto.text,
       createdAt: this.clock.now().toISOString(),
     });

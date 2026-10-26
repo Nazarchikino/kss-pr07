@@ -12,7 +12,9 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { CurrentUser } from '../auth/current-user.decorator.js';
 import { PageQueryDto } from '../common/page.js';
+import type { User } from '../users/user.model.js';
 import { ChangeStatusDto } from './dto/change-status.dto.js';
 import { CreateCommentDto } from './dto/create-comment.dto.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
@@ -37,9 +39,10 @@ export class TicketsController {
   @Post()
   async create(
     @Body() dto: CreateTicketDto,
+    @CurrentUser() user: User,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const ticket = await this.tickets.create(dto);
+    const ticket = await this.tickets.create(dto, user);
     res.location(`/api/v1/tickets/${ticket.id}`);
     return ticket;
   }
@@ -48,8 +51,9 @@ export class TicketsController {
   update(
     @Param('ticketId', ParseIntPipe) ticketId: number,
     @Body() dto: UpdateTicketDto,
+    @CurrentUser() user: User,
   ) {
-    return this.tickets.update(ticketId, dto);
+    return this.tickets.update(ticketId, dto, user);
   }
 
   @Post(':ticketId/status')
@@ -87,9 +91,10 @@ export class TicketsController {
   async addComment(
     @Param('ticketId', ParseIntPipe) ticketId: number,
     @Body() dto: CreateCommentDto,
+    @CurrentUser() user: User,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const comment = await this.tickets.addComment(ticketId, dto);
+    const comment = await this.tickets.addComment(ticketId, dto, user);
     res.location(`/api/v1/tickets/${ticketId}/comments/${comment.id}`);
     return comment;
   }

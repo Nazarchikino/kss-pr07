@@ -1,4 +1,6 @@
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { User } from './user.model.js';
 import { UsersService } from './users.service.js';
 
 @Controller('users')
@@ -8,6 +10,11 @@ export class UsersController {
   @Get()
   findAll() {
     return this.users.findAll();
+  }
+
+  @Get('me')
+  findMe(@CurrentUser() user: User): User {
+    return user;
   }
 
   @Get(':userId')

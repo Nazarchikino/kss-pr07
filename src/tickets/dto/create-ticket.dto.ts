@@ -2,12 +2,10 @@ import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsIn,
-  IsInt,
   IsOptional,
   IsString,
   Length,
   MaxLength,
-  Min,
 } from 'class-validator';
 import { PRIORITIES, type Priority } from '../ticket.model.js';
 
@@ -27,10 +25,6 @@ export class CreateTicketDto {
 
   @IsIn(PRIORITIES, { message: `пріоритет – одне з: ${PRIORITIES.join(', ')}` })
   priority: Priority;
-
-  @IsInt()
-  @Min(1)
-  authorId: number;
 
   @IsOptional()
   @ArrayMaxSize(10)

@@ -16,6 +16,13 @@ export class UsersService {
     return user ? { ...user } : undefined;
   }
 
+  /** Пошук користувача за email (регістронезалежно) – для автентифікації. */
+  findByEmail(email: string): User | undefined {
+    const normalized = email.trim().toLowerCase();
+    const user = this.users.find((u) => u.email.toLowerCase() === normalized);
+    return user ? { ...user } : undefined;
+  }
+
   /** Повертає користувача або кидає 404 – для контролера. */
   findOne(id: number): User {
     const user = this.find(id);
