@@ -1,5 +1,7 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator.js';
+import { Roles } from '../auth/roles.decorator.js';
+import { ParsePositiveIntPipe } from '../common/http/parse-positive-int.pipe.js';
 import type { User } from './user.model.js';
 import { UsersService } from './users.service.js';
 
@@ -7,6 +9,7 @@ import { UsersService } from './users.service.js';
 export class UsersController {
   constructor(private readonly users: UsersService) {}
 
+  @Roles('admin')
   @Get()
   findAll() {
     return this.users.findAll();
@@ -18,7 +21,7 @@ export class UsersController {
   }
 
   @Get(':userId')
-  findOne(@Param('userId', ParseIntPipe) userId: number) {
+  findOne(@Param('userId', ParsePositiveIntPipe) userId: number) {
     return this.users.findOne(userId);
   }
 }

@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -13,6 +12,8 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator.js';
+import { Roles } from '../auth/roles.decorator.js';
+import { ParsePositiveIntPipe } from '../common/http/parse-positive-int.pipe.js';
 import { PageQueryDto } from '../common/page.js';
 import type { User } from '../users/user.model.js';
 import { ChangeStatusDto } from './dto/change-status.dto.js';
@@ -32,7 +33,7 @@ export class TicketsController {
   }
 
   @Get(':ticketId')
-  findOne(@Param('ticketId', ParseIntPipe) ticketId: number) {
+  findOne(@Param('ticketId', ParsePositiveIntPipe) ticketId: number) {
     return this.tickets.findOne(ticketId);
   }
 
@@ -49,31 +50,33 @@ export class TicketsController {
 
   @Patch(':ticketId')
   update(
-    @Param('ticketId', ParseIntPipe) ticketId: number,
+    @Param('ticketId', ParsePositiveIntPipe) ticketId: number,
     @Body() dto: UpdateTicketDto,
     @CurrentUser() user: User,
   ) {
     return this.tickets.update(ticketId, dto, user);
   }
 
+  @Roles('teacher', 'admin')
   @Post(':ticketId/status')
   @HttpCode(200)
   changeStatus(
-    @Param('ticketId', ParseIntPipe) ticketId: number,
+    @Param('ticketId', ParsePositiveIntPipe) ticketId: number,
     @Body() dto: ChangeStatusDto,
   ) {
     return this.tickets.changeStatus(ticketId, dto.status);
   }
 
+  @Roles('admin')
   @Delete(':ticketId')
   @HttpCode(204)
-  remove(@Param('ticketId', ParseIntPipe) ticketId: number) {
+  remove(@Param('ticketId', ParsePositiveIntPipe) ticketId: number) {
     return this.tickets.remove(ticketId);
   }
 
   @Get(':ticketId/comments')
   findComments(
-    @Param('ticketId', ParseIntPipe) ticketId: number,
+    @Param('ticketId', ParsePositiveIntPipe) ticketId: number,
     @Query() page: PageQueryDto,
   ) {
     return this.tickets.findComments(ticketId, page);
@@ -81,15 +84,15 @@ export class TicketsController {
 
   @Get(':ticketId/comments/:commentId')
   findComment(
-    @Param('ticketId', ParseIntPipe) ticketId: number,
-    @Param('commentId', ParseIntPipe) commentId: number,
+    @Param('ticketId', ParsePositiveIntPipe) ticketId: number,
+    @Param('commentId', ParsePositiveIntPipe) commentId: number,
   ) {
     return this.tickets.findComment(ticketId, commentId);
   }
 
   @Post(':ticketId/comments')
   async addComment(
-    @Param('ticketId', ParseIntPipe) ticketId: number,
+    @Param('ticketId', ParsePositiveIntPipe) ticketId: number,
     @Body() dto: CreateCommentDto,
     @CurrentUser() user: User,
     @Res({ passthrough: true }) res: Response,
