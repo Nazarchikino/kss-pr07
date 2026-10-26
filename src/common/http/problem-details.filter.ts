@@ -75,8 +75,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     } else {
       const errMessage =
         exception instanceof Error ? exception.message : String(exception);
-      const errStack =
-        exception instanceof Error ? exception.stack : undefined;
+      const errStack = exception instanceof Error ? exception.stack : undefined;
       this.logger.error(
         `${req.method} ${req.originalUrl} → 500 ${errMessage} [${requestId}]`,
         errStack,

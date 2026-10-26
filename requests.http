@@ -1,0 +1,83 @@
+@base = http://localhost:3000/api/v1
+@studentToken = ВСТАВТЕ_ТОКЕН_ЗДОБУВАЧА
+@teacherToken = ВСТАВТЕ_ТОКЕН_ВИКЛАДАЧА
+@adminToken = ВСТАВТЕ_ТОКЕН_АДМІНІСТРАТОРА
+
+### 1. Публічний маршрут стану (GET /health) → 200 + Server-Timing + X-Request-Id
+GET {{base}}/health
+
+### 2. [Сценарій Завдання 8 – Крок 1] Вхід здобувача (student) → 200
+# @name studentLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "a.petrenko@college.example.ua",
+  "password": "student123"
+}
+
+### 3. [Сценарій Завдання 8 – Крок 2] Створення заявки здобувачем → 201 Created + Location
+POST {{base}}/tickets
+Authorization: Bearer {{studentLogin.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Не працює миша в ауд. 305",
+  "description": "Потрібна заміна оптичної USB-миші",
+  "priority": "low",
+  "tags": ["обладнання", "аудиторія"]
+}
+
+### 4. [Сценарій Завдання 8 – Крок 3] Спроба здобувача змінити стан заявки → 403 Forbidden (problem+json)
+POST {{base}}/tickets/1/status
+Authorization: Bearer {{studentLogin.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "status": "in_progress"
+}
+
+### 5. [Сценарій Завдання 8 – Крок 4] Вхід викладача (teacher) → 200
+# @name teacherLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "m.koval@college.example.ua",
+  "password": "teacher123"
+}
+
+### 6. [Сценарій Завдання 8 – Крок 5] Зміна стану заявки викладачем → 200 OK
+POST {{base}}/tickets/1/status
+Authorization: Bearer {{teacherLogin.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "status": "in_progress"
+}
+
+### 7. [Сценарій Завдання 8 – Крок 6] Запит без токена → 401 Unauthorized + WWW-Authenticate: Bearer realm="helpdesk"
+GET {{base}}/tickets
+
+### 8. [Завдання 8 п. 3] Передача власного заголовка X-Request-Id: pr07-demo-0001
+GET {{base}}/users/me
+Authorization: Bearer {{teacherLogin.response.body.accessToken}}
+X-Request-Id: pr07-demo-0001
+
+### 9. [Завдання 6] Перевірка ParsePositiveIntPipe (0, -1, 1.5, abc → 400 Bad Request)
+GET {{base}}/tickets/0
+Authorization: Bearer {{studentLogin.response.body.accessToken}}
+
+### 10. [Завдання 7] Недопустимий перехід стану (closed → open) → 409 Conflict з полем allowed
+POST {{base}}/tickets/5/status
+Authorization: Bearer {{teacherLogin.response.body.accessToken}}
+X-Request-Id: pr07-demo-0001
+Content-Type: application/json
+
+{
+  "status": "open"
+}
+
+### 11. [Додаткове завдання 1] Перевірка TimeoutInterceptor (затримка 5200 мс > 5000 мс → 503 Service Unavailable)
+GET {{base}}/health/slow?ms=5200
+X-Request-Id: pr07-timeout-503

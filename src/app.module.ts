@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { LoggingInterceptor } from './common/http/logging.interceptor.js';
 import { ProblemDetailsFilter } from './common/http/problem-details.filter.js';
 import { RequestIdMiddleware } from './common/http/request-id.middleware.js';
+import { TimeoutInterceptor } from './common/http/timeout.interceptor.js';
 import { HealthController } from './health.controller.js';
 import { TicketsModule } from './tickets/tickets.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -19,6 +20,7 @@ import { UsersModule } from './users/users.module.js';
   providers: [
     { provide: APP_INFO, useFactory: appInfoFactory },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
     { provide: APP_FILTER, useClass: ProblemDetailsFilter },
   ],
 })

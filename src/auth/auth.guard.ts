@@ -26,7 +26,9 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthRequest>();
     const header = request.header('Authorization');
     if (!header || !header.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Потрібен заголовок Authorization: Bearer <токен>');
+      throw new UnauthorizedException(
+        'Потрібен заголовок Authorization: Bearer <токен>',
+      );
     }
 
     const token = header.slice('Bearer '.length).trim();
